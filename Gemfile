@@ -1,7 +1,14 @@
 source 'https://rubygems.org'
 
-gem 'rails', github: 'rails/rails'
-gem 'rails-observers', github: 'rails/rails-observers'
+gem 'rails'
+gem 'rails-observers'
+gem 'excon'
+gem 'webmock'
+gem 'vcr'
+group 'test' do
+  gem 'rspec'
+  gem 'rspec-mocks'
+end
 
 gemspec
 

@@ -1333,6 +1333,10 @@ module ActiveResource
 
       attributes = Formats.remove_root(attributes) if remove_root
 
+    if data = attributes.delete(:data)
+      attributes.merge!(data)
+    end
+
       attributes.each do |key, value|
         @attributes[key.to_s] =
           case value

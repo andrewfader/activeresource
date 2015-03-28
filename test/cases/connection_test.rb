@@ -1,7 +1,7 @@
 require 'abstract_unit'
 
 class ConnectionTest < ActiveSupport::TestCase
-  ResponseCodeStub = Struct.new(:code)
+  ResponseCodeStub = Struct.new(:data)
   RedirectResponseStub = Struct.new(:code, :Location)
 
   def setup
@@ -35,7 +35,7 @@ class ConnectionTest < ActiveSupport::TestCase
   def test_handle_response
     # 2xx and 3xx are valid responses.
     [200, 299, 300, 399].each do |code|
-      expected = ResponseCodeStub.new(code)
+      expected = ResponseCodeStub.new(status: code)
       assert_equal expected, handle_response(expected)
     end
 
@@ -140,7 +140,7 @@ class ConnectionTest < ActiveSupport::TestCase
   def test_head
     response = @conn.head("/people/1.json")
     assert response.body.blank?
-    assert_equal 200, response.code
+    assert_equal 200, response.data["status"]
   end
 
   def test_get_with_header

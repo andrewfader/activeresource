@@ -118,7 +118,7 @@ module ActiveResource
         result = ActiveSupport::Notifications.instrument("request.active_resource") do |payload|
           payload[:method]      = method
           payload[:request_uri] = "#{site.scheme}://#{site.host}:#{site.port}#{path}"
-          payload[:result]      = http.send(method, path, *arguments)
+          payload[:result]      = http(payload[:request_uri]).send(method, { headers: arguments[0]})
         end
         handle_response(result)
       rescue Timeout::Error => e
@@ -129,7 +129,7 @@ module ActiveResource
 
       # Handles response and error codes from the remote service.
       def handle_response(response)
-        case response.code.to_i
+        case response.data[:status]
           when 301, 302, 303, 307
             raise(Redirection.new(response))
           when 200...400
@@ -159,39 +159,11 @@ module ActiveResource
         end
       end
 
-      # Creates new Net::HTTP instance for communication with the
-      # remote service and resources.
-      def http
-        configure_http(new_http)
-      end
-
-      def new_http
+      def http(request_uri)
         if @proxy
-          Net::HTTP.new(@site.host, @site.port, @proxy.host, @proxy.port, @proxy.user, @proxy.password)
+          Excon.new(request_uri, proxy: "#{@proxy.host || ""}:#{@proxy.port || ""}", username: @proxy.user, password: @proxy.password)
         else
-          Net::HTTP.new(@site.host, @site.port)
-        end
-      end
-
-      def configure_http(http)
-        apply_ssl_options(http).tap do |https|
-          # Net::HTTP timeouts default to 60 seconds.
-          if defined? @timeout
-            https.open_timeout = @timeout
-            https.read_timeout = @timeout
-          end
-        end
-      end
-
-      def apply_ssl_options(http)
-        http.tap do |https|
-          # Skip config if site is already a https:// URI.
-          if defined? @ssl_options
-            http.use_ssl = true
-
-            # All the SSL options have corresponding http settings.
-            @ssl_options.each { |key, value| http.send "#{key}=", value }
-          end
+          Excon.new(request_uri)
         end
       end
 

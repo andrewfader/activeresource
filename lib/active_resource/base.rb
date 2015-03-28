@@ -601,8 +601,8 @@ module ActiveResource
       end
 
       def headers
-        Thread.current["active.resource.headers.#{self.object_id}"] ||= {}         
-        
+        Thread.current["active.resource.headers.#{self.object_id}"] ||= {}
+
         if superclass != Object && superclass.headers
           Thread.current["active.resource.headers.#{self.object_id}"] = superclass.headers.merge(Thread.current["active.resource.headers.#{self.object_id}"])
         else
@@ -935,7 +935,7 @@ module ActiveResource
           prefix_options, query_options = split_options(options[:params])
           path = element_path(id, prefix_options, query_options)
           response = connection.head(path, headers)
-          response.code.to_i == 200
+          response.data["status"].to_i == 200
         end
         # id && !find_single(id, options).nil?
       rescue ActiveResource::ResourceNotFound, ActiveResource::ResourceGone
@@ -1324,6 +1324,7 @@ module ActiveResource
     #   your_supplier.load(my_attrs)
     #   your_supplier.save
     def load(attributes, remove_root = false, persisted = false)
+      attributes = attributes[0] if attributes.is_a? Array
       raise ArgumentError, "expected an attributes Hash, got #{attributes.inspect}" unless attributes.is_a?(Hash)
       @prefix_options, attributes = split_options(attributes)
 
@@ -1444,7 +1445,7 @@ module ActiveResource
       end
 
       def load_attributes_from_response(response)
-        if (response_code_allows_body?(response.code) &&
+        if (response_code_allows_body?(response.data["status"]) &&
             (response['Content-Length'].nil? || response['Content-Length'] != "0") &&
             !response.body.nil? && response.body.strip.size > 0)
           load(self.class.format.decode(response.body), true, true)

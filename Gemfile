@@ -6,6 +6,7 @@ gem 'excon'
 gem 'webmock'
 gem 'vcr'
 group 'test' do
+  gem 'byebug'
   gem 'rspec'
   gem 'rspec-mocks'
 end

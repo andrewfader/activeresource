@@ -71,7 +71,7 @@ module ActiveResource
         EOE
       end
 
-    private
+      private
 
       def delete_duplicate_responses(request)
         @responses.delete_if {|r| r[0] == request }
@@ -230,12 +230,14 @@ module ActiveResource
         #   end
         # end
         module_eval <<-EOE, __FILE__, __LINE__ + 1
-          def #{method}(path, #{'body, ' if has_body}headers)
-            request = ActiveResource::Request.new(:#{method}, path, #{has_body ? 'body, ' : 'nil, '}headers)
+          def #{method}(headers)
+            request = ActiveResource::Request.new(:#{method}, @path, #{has_body ? 'body, ' : 'nil, '}headers[:headers])
             self.class.requests << request
             if response = self.class.responses.assoc(request)
               response[1]
             else
+            require 'byebug'
+            debugger
               raise InvalidRequestError.new("Could not find a response recorded for \#{request.to_s} - Responses recorded are: \#{inspect_responses}")
             end
           end
@@ -243,8 +245,9 @@ module ActiveResource
       end
     end
 
-    def initialize(site) #:nodoc:
-      @site = site
+    def initialize(path) #:nodoc:
+      # @site = site
+      @path = path
     end
 
     def inspect_responses #:nodoc:
@@ -281,13 +284,13 @@ module ActiveResource
   end
 
   class Response
-    attr_accessor :body, :message, :code, :headers
+    attr_accessor :body, :message, :data, :headers
 
     def initialize(body, message = 200, headers = {})
       @body, @message, @headers = body, message.to_s, headers
-      @code = @message[0,3].to_i
+      @data = {body: @body, headers: @headers, status: @message[0,3].to_i }
 
-      resp_cls = Net::HTTPResponse::CODE_TO_OBJ[@code.to_s]
+      resp_cls = Net::HTTPResponse::CODE_TO_OBJ[@data["status"].to_s]
       if resp_cls && !resp_cls.body_permitted?
         @body = nil
       end
@@ -323,10 +326,11 @@ module ActiveResource
 
   class Connection
     private
-      silence_warnings do
-        def http
-          @http ||= HttpMock.new(@site)
-        end
+    silence_warnings do
+      def http(path=nil)
+        path = URI.parse(path).path
+        @http ||= HttpMock.new(path)
       end
+    end
   end
 end
